@@ -4,6 +4,13 @@ import Shop from "../models/Shop.js"
 import Reservation from "../models/Reservation.js"
 import getBooked from "../utils/getBooked.js"
 
+// "2026-12-12T00:00:00.000Z" -> "2026-12-12"
+const dayOnly = (d) => {
+    if (!d) return ""
+    if (typeof d === "string") return d.slice(0, 10)
+    return new Date(d).toISOString().slice(0, 10)
+}
+
 // owner: add a time slot to my shop
 const createSlot = asyncHandler(async (req, res) => {
     const { date, time, capacity } = req.body
@@ -13,10 +20,27 @@ const createSlot = asyncHandler(async (req, res) => {
         throw new Error("Please add date, time and capacity")
     }
 
-    const shop = await Shop.findOne({ owner: req.user._id })
+    const shop = await Shop.findOne({ owner: req.user._id }).populate(
+        "festival",
+        "name startDate endDate"
+    )
     if (!shop) {
         res.status(404)
         throw new Error("Create your shop first")
+    }
+
+    // the date must be inside the festival days
+    const start = dayOnly(shop.festival?.startDate)
+    const end = dayOnly(shop.festival?.endDate)
+    const day = dayOnly(date)
+
+    if (start && day < start) {
+        res.status(400)
+        throw new Error(`The festival starts on ${start}`)
+    }
+    if (end && day > end) {
+        res.status(400)
+        throw new Error(`The festival ends on ${end}`)
     }
 
     const exists = await Slot.findOne({ shop: shop._id, date, time })
@@ -68,8 +92,8 @@ const deleteSlot = asyncHandler(async (req, res) => {
     }
 
     const active = await Reservation.findOne({
-        slot: slot._id,
-        status: { $in: ["pending", "approved"] },
+        $or: [{ slot: slot._id }, { offerSlot: slot._id }],
+        status: { $in: ["pending", "approved", "offered"] },
     })
     if (active) {
         res.status(400)
