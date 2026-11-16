@@ -64,7 +64,10 @@ const createShop = asyncHandler(async (req, res) => {
 
 // owner: get my shop
 const getMyShop = asyncHandler(async (req, res) => {
-    const shop = await Shop.findOne({ owner: req.user._id }).populate("festival", "name place")
+    const shop = await Shop.findOne({ owner: req.user._id }).populate(
+        "festival",
+        "name place mapLocation startDate endDate"
+    )
 
     if (!shop) {
         res.status(404)
@@ -145,12 +148,12 @@ const deleteMyShop = asyncHandler(async (req, res) => {
 
     const activeBookings = await Reservation.countDocuments({
         shop: shop._id,
-        status: { $in: ["pending", "approved"] },
+        status: { $in: ["pending", "approved", "offered"] },
     })
     if (activeBookings > 0) {
         res.status(400)
         throw new Error(
-            `You still have ${activeBookings} pending or confirmed booking(s). Finish them first.`
+            `You still have ${activeBookings} pending, confirmed or suggested booking(s). Finish them first.`
         )
     }
 
@@ -178,13 +181,19 @@ const getShops = asyncHandler(async (req, res) => {
     const filter = req.query.festival ? { festival: req.query.festival } : {}
     const sort = req.query.sort === "rating" ? { avgRating: -1, reviewCount: -1 } : { createdAt: -1 }
 
-    const shops = await Shop.find(filter).sort(sort).populate("festival", "name place mapLocation")
+    const shops = await Shop.find(filter)
+        .sort(sort)
+        .populate("festival", "name place mapLocation startDate endDate")
+
     res.status(200).json(shops)
 })
 
 // anyone: one shop
 const getShop = asyncHandler(async (req, res) => {
-    const shop = await Shop.findById(req.params.id).populate("festival", "name place mapLocation")
+    const shop = await Shop.findById(req.params.id).populate(
+        "festival",
+        "name place mapLocation startDate endDate"
+    )
 
     if (!shop) {
         res.status(404)

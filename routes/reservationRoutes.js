@@ -3,14 +3,18 @@ import protect from "../middleware/authMiddleware.js"
 import { ownerOnly, customerOnly } from "../middleware/roleMiddleware.js"
 import {
     createReservation,
+    requestReservation,
     getMyReservations,
     cancelReservation,
+    acceptOffer,
+    declineOffer,
     deleteMyReservation,
     clearMyHistory,
     getShopReservations,
     deleteShopReservation,
     clearShopHistory,
     updateReservationStatus,
+    suggestTime,
     getReservationByCode,
     checkInReservation,
     getMyStamps,
@@ -22,10 +26,13 @@ const router = express.Router()
 
 // customer
 router.post("/", protect, customerOnly, createReservation)
+router.post("/request", protect, customerOnly, requestReservation)
 router.get("/my", protect, customerOnly, getMyReservations)
 router.get("/stamps", protect, customerOnly, getMyStamps)
 router.delete("/history", protect, customerOnly, clearMyHistory)
 router.put("/:id/cancel", protect, customerOnly, cancelReservation)
+router.put("/:id/accept", protect, customerOnly, acceptOffer)
+router.put("/:id/decline-offer", protect, customerOnly, declineOffer)
 router.delete("/:id", protect, customerOnly, deleteMyReservation)
 
 // owner
@@ -36,6 +43,7 @@ router.get("/code/:code", protect, ownerOnly, getReservationByCode)
 router.get("/coupon/:code", protect, ownerOnly, getCouponByCode)
 router.put("/coupon/:id/use", protect, ownerOnly, redeemCoupon)
 router.put("/:id/status", protect, ownerOnly, updateReservationStatus)
+router.put("/:id/suggest", protect, ownerOnly, suggestTime)
 router.put("/:id/checkin", protect, ownerOnly, checkInReservation)
 
 export default router

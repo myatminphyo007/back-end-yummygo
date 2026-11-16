@@ -1,10 +1,15 @@
 import Reservation from "../models/Reservation.js"
 
-const getBooked = async (slotId, excludeId) => {
-    const filter = { slot: slotId, status: { $in: ["approved", "completed"] } }
-    if (excludeId) filter._id = { $ne: excludeId }
+// places taken in one slot: confirmed and finished bookings,
+// plus suggested times that are still on hold
+const getBooked = async (slotId) => {
+    const list = await Reservation.find({
+        $or: [
+            { slot: slotId, status: { $in: ["approved", "completed"] } },
+            { offerSlot: slotId, status: "offered", offerExpiresAt: { $gt: new Date() } },
+        ],
+    })
 
-    const list = await Reservation.find(filter)
     return list.reduce((sum, r) => sum + r.people, 0)
 }
 
