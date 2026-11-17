@@ -6,6 +6,12 @@ const reviewSchema = new mongoose.Schema(
         shop: { type: mongoose.Schema.Types.ObjectId, ref: "Shop", required: true },
         rating: { type: Number, required: true, min: 1, max: 5 },
         comment: { type: String, default: "", maxlength: 500 },
+        // up to 3 photos (Cloudinary links)
+        photos: {
+            type: [String],
+            default: [],
+            validate: [(arr) => arr.length <= 3, "You can add up to 3 photos"],
+        },
     },
     { timestamps: true }
 )

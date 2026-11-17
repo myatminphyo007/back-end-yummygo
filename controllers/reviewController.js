@@ -4,7 +4,9 @@ import Shop from "../models/Shop.js"
 import Reservation from "../models/Reservation.js"
 import updateShopRating from "../utils/updateShopRating.js"
 
-// customer: add a review
+const MAX_PHOTOS = 3
+
+// customer: add a review (photos are optional)
 const createReview = asyncHandler(async (req, res) => {
     const { shopId, rating, comment } = req.body
 
@@ -36,11 +38,14 @@ const createReview = asyncHandler(async (req, res) => {
         throw new Error("You already reviewed this shop")
     }
 
+    const photos = (req.files || []).map((f) => f.path)
+
     const review = await Review.create({
         user: req.user._id,
         shop: shop._id,
         rating,
         comment,
+        photos,
     })
 
     await updateShopRating(shop._id)
@@ -56,7 +61,7 @@ const getShopReviews = asyncHandler(async (req, res) => {
     res.status(200).json(reviews)
 })
 
-// customer: edit my review
+// customer: edit my review (text, rating and photos)
 const updateReview = asyncHandler(async (req, res) => {
     const review = await Review.findById(req.params.id)
 
@@ -73,6 +78,25 @@ const updateReview = asyncHandler(async (req, res) => {
     const { rating, comment } = req.body
     if (rating !== undefined) review.rating = rating
     if (comment !== undefined) review.comment = comment
+
+    // photos: remove some (removePhotos = JSON list of links) and/or add new ones
+    let remove = []
+    if (req.body.removePhotos) {
+        try {
+            const parsed = JSON.parse(req.body.removePhotos)
+            if (Array.isArray(parsed)) remove = parsed
+        } catch {
+            remove = []
+        }
+    }
+    const kept = review.photos.filter((p) => !remove.includes(p))
+    const added = (req.files || []).map((f) => f.path)
+
+    if (kept.length + added.length > MAX_PHOTOS) {
+        res.status(400)
+        throw new Error(`You can add up to ${MAX_PHOTOS} photos`)
+    }
+    review.photos = [...kept, ...added]
 
     const updated = await review.save()
     await updateShopRating(review.shop)
