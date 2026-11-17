@@ -72,4 +72,43 @@ const loginHandler = asyncHandler(async (req, res) => {
     }
 })
 
-export { registerHandler, loginHandler }
+// edit my own name and photo (works for owner, customer and admin)
+const updateProfileHandler = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id || req.user.id)
+    if (!user) {
+        res.status(404)
+        throw new Error("User not found")
+    }
+
+    if (req.body.name !== undefined) {
+        const name = String(req.body.name).trim()
+        if (!name) {
+            res.status(400)
+            throw new Error("Name cannot be empty")
+        }
+        if (name.length > 40) {
+            res.status(400)
+            throw new Error("Name is too long (40 characters max)")
+        }
+        user.name = name
+    }
+
+    if (req.file) {
+        user.profileImage = req.file.path
+    } else if (req.body.removeImage === "true") {
+        user.profileImage = ""
+    }
+
+    await user.save()
+
+    // no token here: the browser keeps the one it already has
+    res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profileImage: user.profileImage
+    })
+})
+
+export { registerHandler, loginHandler, updateProfileHandler }
