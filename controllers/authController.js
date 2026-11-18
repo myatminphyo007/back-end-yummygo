@@ -158,7 +158,7 @@ const sendChangeCodeHandler = asyncHandler(async (req, res) => {
 
 // change password (logged in), step 2: current password + code + new password
 const changePasswordHandler = asyncHandler(async (req, res) => {
-    const { currentPassword, code, newPassword } = req.body
+    const { currentPassword, code, newPassword, forgotCurrent } = req.body
 
     const user = await User.findById(req.user._id || req.user.id)
     if (!user) {
@@ -166,9 +166,13 @@ const changePasswordHandler = asyncHandler(async (req, res) => {
         throw new Error("User not found")
     }
 
-    if (!currentPassword || !(await bcrypt.compare(currentPassword, user.password))) {
-        res.status(400)
-        throw new Error("Current password is wrong")
+    // Normally the current password is needed. If the person forgot it, the code
+    // that was emailed to their own address is enough proof (they are also logged in).
+    if (!forgotCurrent) {
+        if (!currentPassword || !(await bcrypt.compare(currentPassword, user.password))) {
+            res.status(400)
+            throw new Error("Current password is wrong")
+        }
     }
 
     checkPassword(res, newPassword)
